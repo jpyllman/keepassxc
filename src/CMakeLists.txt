@@ -27,6 +27,9 @@ set(keepassx_SOURCES
         core/Alloc.cpp
         core/AutoTypeAssociations.cpp
         core/AutoTypeMatch.cpp
+        core/Base32.cpp
+        core/Bootstrap.cpp
+        core/Clock.cpp
         core/Compare.cpp
         core/Config.cpp
         core/CsvParser.cpp
@@ -39,8 +42,8 @@ set(keepassx_SOURCES
         core/EntrySearcher.cpp
         core/FilePath.cpp
         core/FileWatcher.cpp
-        core/Bootstrap.cpp
         core/Group.cpp
+        core/HibpOffline.cpp
         core/InactivityTimer.cpp
         core/Merger.cpp
         core/Metadata.cpp
@@ -51,10 +54,8 @@ set(keepassx_SOURCES
         core/ScreenLockListenerPrivate.cpp
         core/TimeDelta.cpp
         core/TimeInfo.cpp
-        core/Clock.cpp
         core/Tools.cpp
         core/Translator.cpp
-        core/Base32.cpp
         cli/Utils.cpp
         cli/TextStream.cpp
         crypto/Crypto.cpp
@@ -66,6 +67,7 @@ set(keepassx_SOURCES
         crypto/kdf/AesKdf.cpp
         crypto/kdf/Argon2Kdf.cpp
         format/CsvExporter.cpp
+        format/HtmlExporter.cpp
         format/KeePass1Reader.cpp
         format/KeePass2.cpp
         format/KeePass2RandomStream.cpp
@@ -262,7 +264,12 @@ else()
 endif()
 
 if(WITH_XC_NETWORKING)
-    list(APPEND keepassx_SOURCES updatecheck/UpdateChecker.cpp gui/UpdateCheckDialog.cpp)
+    list(APPEND keepassx_SOURCES
+            core/IconDownloader.cpp
+            core/NetworkManager.cpp
+            gui/UpdateCheckDialog.cpp
+            gui/IconDownloaderDialog.cpp
+            updatecheck/UpdateChecker.cpp)
 endif()
 
 if(WITH_XC_TOUCHID)

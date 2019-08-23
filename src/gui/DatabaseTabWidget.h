@@ -69,6 +69,7 @@ public slots:
     bool saveDatabase(int index = -1);
     bool saveDatabaseAs(int index = -1);
     void exportToCsv();
+    void exportToHtml();
 
     void lockDatabases();
     void closeDatabaseFromSender();
@@ -98,6 +99,7 @@ private slots:
 private:
     QSharedPointer<Database> execNewDatabaseWizard();
     void updateLastDatabases(const QString& filename);
+    bool warnOnExport();
 
     QPointer<DatabaseWidgetStateSync> m_dbWidgetStateSync;
     QPointer<DatabaseWidget> m_dbWidgetPendingLock;

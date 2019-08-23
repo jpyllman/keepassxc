@@ -62,6 +62,10 @@
 #include "keeshare/KeeShare.h"
 #include "touchid/TouchID.h"
 
+#ifdef WITH_XC_NETWORKING
+#include "gui/IconDownloaderDialog.h"
+#endif
+
 #ifdef Q_OS_LINUX
 #include <sys/vfs.h>
 #endif
@@ -625,8 +629,12 @@ void DatabaseWidget::showTotpKeyQrCode()
 void DatabaseWidget::setClipboardTextAndMinimize(const QString& text)
 {
     clipboard()->setText(text);
-    if (config()->get("MinimizeOnCopy").toBool()) {
-        window()->showMinimized();
+    if (config()->get("HideWindowOnCopy").toBool()) {
+        if (config()->get("MinimizeOnCopy").toBool()) {
+            window()->showMinimized();
+        } else if (config()->get("DropToBackgroundOnCopy").toBool()) {
+            window()->lower();
+        }
     }
 }
 
@@ -644,6 +652,41 @@ void DatabaseWidget::openUrl()
     if (currentEntry) {
         openUrlForEntry(currentEntry);
     }
+}
+
+void DatabaseWidget::downloadSelectedFavicons()
+{
+#ifdef WITH_XC_NETWORKING
+    QList<Entry*> selectedEntries;
+    for (const auto& index : m_entryView->selectionModel()->selectedRows()) {
+        selectedEntries.append(m_entryView->entryFromIndex(index));
+    }
+
+    // Force download even if icon already exists
+    performIconDownloads(selectedEntries, true);
+#endif
+}
+
+void DatabaseWidget::downloadAllFavicons()
+{
+#ifdef WITH_XC_NETWORKING
+    auto currentGroup = m_groupView->currentGroup();
+    if (currentGroup) {
+        performIconDownloads(currentGroup->entries());
+    }
+#endif
+}
+
+void DatabaseWidget::performIconDownloads(const QList<Entry*>& entries, bool force)
+{
+#ifdef WITH_XC_NETWORKING
+    auto* iconDownloaderDialog = new IconDownloaderDialog(this);
+    connect(this, SIGNAL(databaseLockRequested()), iconDownloaderDialog, SLOT(close()));
+    iconDownloaderDialog->downloadFavicons(m_db, entries, force);
+#else
+    Q_UNUSED(entries);
+    Q_UNUSED(force);
+#endif
 }
 
 void DatabaseWidget::openUrlForEntry(Entry* entry)
@@ -1270,6 +1313,8 @@ bool DatabaseWidget::lock()
     if (isLocked()) {
         return true;
     }
+
+    emit databaseLockRequested();
 
     clipboard()->clearCopiedText();
 

@@ -80,12 +80,15 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
 
     // clang-format off
     connect(m_generalUi->autoSaveAfterEveryChangeCheckBox, SIGNAL(toggled(bool)), SLOT(autoSaveToggled(bool)));
+    connect(m_generalUi->hideWindowOnCopyCheckBox, SIGNAL(toggled(bool)), SLOT(hideWindowOnCopyCheckBoxToggled(bool)));
     connect(m_generalUi->systrayShowCheckBox, SIGNAL(toggled(bool)), SLOT(systrayToggled(bool)));
     connect(m_generalUi->toolbarHideCheckBox, SIGNAL(toggled(bool)), SLOT(toolbarSettingsToggled(bool)));
     connect(m_generalUi->rememberLastDatabasesCheckBox, SIGNAL(toggled(bool)), SLOT(rememberDatabasesToggled(bool)));
 
     connect(m_secUi->clearClipboardCheckBox, SIGNAL(toggled(bool)),
             m_secUi->clearClipboardSpinBox, SLOT(setEnabled(bool)));
+    connect(m_secUi->clearSearchCheckBox, SIGNAL(toggled(bool)),
+            m_secUi->clearSearchSpinBox, SLOT(setEnabled(bool)));
     connect(m_secUi->lockDatabaseIdleCheckBox, SIGNAL(toggled(bool)),
             m_secUi->lockDatabaseIdleSpinBox, SLOT(setEnabled(bool)));
     connect(m_secUi->touchIDResetCheckBox, SIGNAL(toggled(bool)),
@@ -102,6 +105,8 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
 
 #ifndef WITH_XC_NETWORKING
     m_secUi->privacy->setVisible(false);
+    m_generalUi->faviconTimeoutLabel->setVisible(false);
+    m_generalUi->faviconTimeoutSpinBox->setVisible(false);
 #endif
 
 #ifndef WITH_XC_TOUCHID
@@ -147,12 +152,19 @@ void ApplicationSettingsWidget::loadSettings()
     m_generalUi->backupBeforeSaveCheckBox->setChecked(config()->get("BackupBeforeSave").toBool());
     m_generalUi->useAtomicSavesCheckBox->setChecked(config()->get("UseAtomicSaves").toBool());
     m_generalUi->autoReloadOnChangeCheckBox->setChecked(config()->get("AutoReloadOnChange").toBool());
-    m_generalUi->minimizeOnCopyCheckBox->setChecked(config()->get("MinimizeOnCopy").toBool());
     m_generalUi->minimizeOnOpenUrlCheckBox->setChecked(config()->get("MinimizeOnOpenUrl").toBool());
+    m_generalUi->hideWindowOnCopyCheckBox->setChecked(config()->get("HideWindowOnCopy").toBool());
+    m_generalUi->minimizeOnCopyRadioButton->setChecked(config()->get("MinimizeOnCopy").toBool());
+    m_generalUi->dropToBackgroundOnCopyRadioButton->setChecked(config()->get("DropToBackgroundOnCopy").toBool());
     m_generalUi->useGroupIconOnEntryCreationCheckBox->setChecked(config()->get("UseGroupIconOnEntryCreation").toBool());
     m_generalUi->autoTypeEntryTitleMatchCheckBox->setChecked(config()->get("AutoTypeEntryTitleMatch").toBool());
     m_generalUi->autoTypeEntryURLMatchCheckBox->setChecked(config()->get("AutoTypeEntryURLMatch").toBool());
     m_generalUi->ignoreGroupExpansionCheckBox->setChecked(config()->get("IgnoreGroupExpansion").toBool());
+    m_generalUi->faviconTimeoutSpinBox->setValue(config()->get("FaviconDownloadTimeout").toInt());
+
+    if (!m_generalUi->hideWindowOnCopyCheckBox->isChecked()) {
+        hideWindowOnCopyCheckBoxToggled(false);
+    }
 
     m_generalUi->languageComboBox->clear();
     QList<QPair<QString, QString>> languages = Translator::availableLanguages();
@@ -167,6 +179,7 @@ void ApplicationSettingsWidget::loadSettings()
     m_generalUi->previewHideCheckBox->setChecked(config()->get("GUI/HidePreviewPanel").toBool());
     m_generalUi->toolbarHideCheckBox->setChecked(config()->get("GUI/HideToolbar").toBool());
     m_generalUi->toolbarMovableCheckBox->setChecked(config()->get("GUI/MovableToolbar").toBool());
+    m_generalUi->monospaceNotesCheckBox->setChecked(config()->get("GUI/MonospaceNotes").toBool());
 
     m_generalUi->toolButtonStyleComboBox->clear();
     m_generalUi->toolButtonStyleComboBox->addItem(tr("Icon only"), Qt::ToolButtonIconOnly);
@@ -203,6 +216,9 @@ void ApplicationSettingsWidget::loadSettings()
 
     m_secUi->clearClipboardCheckBox->setChecked(config()->get("security/clearclipboard").toBool());
     m_secUi->clearClipboardSpinBox->setValue(config()->get("security/clearclipboardtimeout").toInt());
+
+    m_secUi->clearSearchCheckBox->setChecked(config()->get("security/clearsearch").toBool());
+    m_secUi->clearSearchSpinBox->setValue(config()->get("security/clearsearchtimeout").toInt());
 
     m_secUi->lockDatabaseIdleCheckBox->setChecked(config()->get("security/lockdatabaseidle").toBool());
     m_secUi->lockDatabaseIdleSpinBox->setValue(config()->get("security/lockdatabaseidlesec").toInt());
@@ -247,19 +263,23 @@ void ApplicationSettingsWidget::saveSettings()
     config()->set("BackupBeforeSave", m_generalUi->backupBeforeSaveCheckBox->isChecked());
     config()->set("UseAtomicSaves", m_generalUi->useAtomicSavesCheckBox->isChecked());
     config()->set("AutoReloadOnChange", m_generalUi->autoReloadOnChangeCheckBox->isChecked());
-    config()->set("MinimizeOnCopy", m_generalUi->minimizeOnCopyCheckBox->isChecked());
     config()->set("MinimizeOnOpenUrl", m_generalUi->minimizeOnOpenUrlCheckBox->isChecked());
+    config()->set("HideWindowOnCopy", m_generalUi->hideWindowOnCopyCheckBox->isChecked());
+    config()->set("MinimizeOnCopy", m_generalUi->minimizeOnCopyRadioButton->isChecked());
+    config()->set("DropToBackgroundOnCopy", m_generalUi->dropToBackgroundOnCopyRadioButton->isChecked());
     config()->set("UseGroupIconOnEntryCreation", m_generalUi->useGroupIconOnEntryCreationCheckBox->isChecked());
     config()->set("IgnoreGroupExpansion", m_generalUi->ignoreGroupExpansionCheckBox->isChecked());
     config()->set("AutoTypeEntryTitleMatch", m_generalUi->autoTypeEntryTitleMatchCheckBox->isChecked());
     config()->set("AutoTypeEntryURLMatch", m_generalUi->autoTypeEntryURLMatchCheckBox->isChecked());
     int currentLangIndex = m_generalUi->languageComboBox->currentIndex();
+    config()->set("FaviconDownloadTimeout", m_generalUi->faviconTimeoutSpinBox->value());
 
     config()->set("GUI/Language", m_generalUi->languageComboBox->itemData(currentLangIndex).toString());
 
     config()->set("GUI/HidePreviewPanel", m_generalUi->previewHideCheckBox->isChecked());
     config()->set("GUI/HideToolbar", m_generalUi->toolbarHideCheckBox->isChecked());
     config()->set("GUI/MovableToolbar", m_generalUi->toolbarMovableCheckBox->isChecked());
+    config()->set("GUI/MonospaceNotes", m_generalUi->monospaceNotesCheckBox->isChecked());
 
     int currentToolButtonStyleIndex = m_generalUi->toolButtonStyleComboBox->currentIndex();
     config()->set("GUI/ToolButtonStyle",
@@ -283,6 +303,9 @@ void ApplicationSettingsWidget::saveSettings()
     }
     config()->set("security/clearclipboard", m_secUi->clearClipboardCheckBox->isChecked());
     config()->set("security/clearclipboardtimeout", m_secUi->clearClipboardSpinBox->value());
+
+    config()->set("security/clearsearch", m_secUi->clearSearchCheckBox->isChecked());
+    config()->set("security/clearsearchtimeout", m_secUi->clearSearchSpinBox->value());
 
     config()->set("security/lockdatabaseidle", m_secUi->lockDatabaseIdleCheckBox->isChecked());
     config()->set("security/lockdatabaseidlesec", m_secUi->lockDatabaseIdleSpinBox->value());
@@ -334,6 +357,12 @@ void ApplicationSettingsWidget::autoSaveToggled(bool checked)
         m_generalUi->autoSaveOnExitCheckBox->setChecked(true);
     }
     m_generalUi->autoSaveOnExitCheckBox->setEnabled(!checked);
+}
+
+void ApplicationSettingsWidget::hideWindowOnCopyCheckBoxToggled(bool checked)
+{
+    m_generalUi->minimizeOnCopyRadioButton->setEnabled(checked);
+    m_generalUi->dropToBackgroundOnCopyRadioButton->setEnabled(checked);
 }
 
 void ApplicationSettingsWidget::systrayToggled(bool checked)
