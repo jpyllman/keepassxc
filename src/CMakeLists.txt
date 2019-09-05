@@ -43,6 +43,7 @@ set(keepassx_SOURCES
         core/FilePath.cpp
         core/FileWatcher.cpp
         core/Group.cpp
+        core/GlobalHotKeys.cpp
         core/HibpOffline.cpp
         core/InactivityTimer.cpp
         core/Merger.cpp
